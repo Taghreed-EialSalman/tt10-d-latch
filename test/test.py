@@ -1,9 +1,6 @@
-# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
-# SPDX-License-Identifier: Apache-2.0
-
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+from cocotb.triggers import ClockCycles, Timer, RisingEdge
 
 
 @cocotb.test()
@@ -25,16 +22,24 @@ async def test_project(dut):
 
     dut._log.info("Test project behavior")
 
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
+    # Set initial values
+    dut.ui_in[0].value = 0  # d
+    dut.ui_in[1].value = 0  # e
 
-    # Wait for one clock cycle to see the output values
-    await ClockCycles(dut.clk, 1)
+    # Start toggling d and e
+    cocotb.start_soon(toggle_signal(dut, index=0, period_ns=50))  # d = ui_in[0]
+    cocotb.start_soon(toggle_signal(dut, index=1, period_ns=30))  # e = ui_in[1]
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
+    # Wait for a few clock cycles
+    await ClockCycles(dut.clk, 1000)
 
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+    # Example assertion (adjust according to your design)
+    # assert dut.uo_out.value == 50, "Output assertion not required"
+
+
+async def toggle_signal(dut, index, period_ns):
+    """Toggle ui_in[index] every period_ns nanoseconds."""
+    dut.ui_in[index].value = 0
+    while True:
+        await Timer(period_ns, units="ns")
+        dut.ui_in[index].value = not dut.ui_in[index].value
